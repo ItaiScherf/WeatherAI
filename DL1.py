@@ -55,7 +55,7 @@ class DLLayer:
             self.W = np.random.randn(*self.get_W_shape()) * np.sqrt(1.0 / sum(self._input_shape))
 
     def get_W_shape(self):
-        return self._num_neurons, *self._input_shape
+        return (self._num_neurons, *(self._input_shape))
 
     def _sigmoid(self, Z):
         return 1 / (1 + np.exp(-Z))
@@ -110,7 +110,7 @@ class DLLayer:
 
     def forward_propagation(self, A_prev, is_predict):
         self._A_prev = np.array(A_prev, copy=True)
-        self._Z = self.W @ A_prev + self.b
+        self._Z = np.dot(self.W, A_prev) + self.b
         A = self.activation_forward(self._Z)
         return A
 
