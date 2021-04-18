@@ -49,13 +49,9 @@ class DLLayer:
             self.W = np.full(self.get_W_shape(), self.alpha)
         elif W_initialization == "random":
             self.W = np.random.randn(*self.get_W_shape()) * self.random_scale
-        elif W_initialization == "He":
-            self.W = np.random.randn(*self.get_W_shape()) * np.sqrt(2.0 / sum(self._input_shape))
-        elif W_initialization == "Xaviar":
-            self.W = np.random.randn(*self.get_W_shape()) * np.sqrt(1.0 / sum(self._input_shape))
 
     def get_W_shape(self):
-        return (self._num_neurons, *(self._input_shape))
+        return (self._num_neurons, self._input_shape)
 
     def _sigmoid(self, Z):
         return 1 / (1 + np.exp(-Z))
@@ -78,6 +74,11 @@ class DLLayer:
             A = np.where(A > 1 - TRIM, 1 - TRIM, A)
         return A
 
+    def _trim_sigmoid_backward(self, dA):
+        A = self._trim_sigmoid(self._Z)
+        dZ = dA * A * (1 - A)
+        return dZ
+
     def _tanh(self, Z):
         return np.tanh(Z)
 
@@ -93,6 +94,11 @@ class DLLayer:
             A = np.where(A < -1 + TRIM, TRIM, A)
             A = np.where(A > 1 - TRIM, 1 - TRIM, A)
         return A
+
+    def _trim_tanh_backward(self, dA):
+        A = self._trim_tanh(self._Z)
+        dZ = dA * (1 - A ** 2)
+        return dZ
 
     def _relu(self, Z):
         return np.maximum(0, Z)
@@ -122,17 +128,17 @@ class DLLayer:
         dA_prev = self.W.T @ dZ
         return dA_prev
 
-    def update_parameters(self):
+    def update_parameters(self, dW, db):
         if self._optimization == 'adaptive':
-            self._adaptive_alpha_W *= np.where(self._adaptive_alpha_W * self.dW > 0, self.adaptive_cont,
+            self._adaptive_alpha_W *= np.where(self._adaptive_alpha_W * dW > 0, self.adaptive_cont,
                                                -self.adaptive_switch)
-            self._adaptive_alpha_b *= np.where(self._adaptive_alpha_b * self.db > 0, self.adaptive_cont,
+            self._adaptive_alpha_b *= np.where(self._adaptive_alpha_b * db > 0, self.adaptive_cont,
                                                -self.adaptive_switch)
             self.W -= self._adaptive_alpha_W
             self.b -= self._adaptive_alpha_b
         else:
-            self.W -= self.alpha * self.dW
-            self.b -= self.alpha * self.db
+            self.W -= self.alpha * dW
+            self.b -= self.alpha * db
 
     def __str__(self):
         s = "Perseptrons Layer:\n"
@@ -150,7 +156,7 @@ class DLLayer:
             s += "\t\t\tswitch: " + str(self.adaptive_switch) + "\n"
         # parameters
         s += "\tparameters:\n\t\tb.T: " + str(self.b.T) + "\n"
-        s += "\t\tshape weights: " + str(self.get_W_shape) + "\n"
+        s += "\t\tshape weights: (" + str(self._num_neurons) + "," + str(self._input_shape) + ") \n"
         plt.hist(self.W.reshape(-1))
         plt.title("W histogram")
         plt.show()
