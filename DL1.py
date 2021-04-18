@@ -2,24 +2,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 
+
 class DLLayer:
-    def __init__(self, num_neurons, input_shape, activation="relu", W_initialization = "random", learning_rate=0.01, optimization = "adaptive"):
+    def __init__(self, num_neurons, input_shape, activation="relu", W_initialization="random", learning_rate=0.01,
+                 optimization="adaptive"):
         self._num_neurons = num_neurons
         self._input_shape = input_shape
         self._activation = activation
         self._optimization = optimization
         self.alpha = float(learning_rate)
         self.random_scale = 0.01
-
-        self.b = np.zeros((self._num_neurons, 1), dtype=float)
-        if W_initialization == "zeros":
-            self.W = np.full(self.get_W_shape(), self.alpha)
-        elif W_initialization == "random":
-            self.W = np.random.randn(*self.get_W_shape()) * self.random_scale
-        elif W_initialization == "He":
-            self.W = np.random.randn(*self.get_W_shape()) * np.sqrt(2.0 / sum(self._input_shape))
-        elif W_initialization == "Xaviar":
-            self.W = np.random.randn(*self.get_W_shape()) * np.sqrt(1.0 / sum(self._input_shape))
+        self.init_weights(W_initialization)
 
         if self._optimization == 'adaptive':
             self._adaptive_alpha_b = np.full((self._num_neurons, 1), self.alpha)
@@ -49,6 +42,17 @@ class DLLayer:
         elif activation == "leaky_relu":
             self.activation_forward = self._leaky_relu
             self.activation_backward = self._leaky_relu_backward
+
+    def init_weights(self, W_initialization):
+        self.b = np.zeros((self._num_neurons, 1), dtype=float)
+        if W_initialization == "zeros":
+            self.W = np.full(self.get_W_shape(), self.alpha)
+        elif W_initialization == "random":
+            self.W = np.random.randn(*self.get_W_shape()) * self.random_scale
+        elif W_initialization == "He":
+            self.W = np.random.randn(*self.get_W_shape()) * np.sqrt(2.0 / sum(self._input_shape))
+        elif W_initialization == "Xaviar":
+            self.W = np.random.randn(*self.get_W_shape()) * np.sqrt(1.0 / sum(self._input_shape))
 
     def get_W_shape(self):
         return self._num_neurons, *self._input_shape
