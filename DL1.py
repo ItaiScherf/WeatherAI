@@ -118,6 +118,18 @@ class DLLayer:
         dA_prev = self.W.T @ dZ
         return dA_prev
 
+    def update_parameters(self):
+        if self._optimization == 'adaptive':
+            self._adaptive_alpha_W *= np.where(self._adaptive_alpha_W * self.dW > 0, self.adaptive_cont,
+                                               -self.adaptive_switch)
+            self._adaptive_alpha_b *= np.where(self._adaptive_alpha_b * self.db > 0, self.adaptive_cont,
+                                               -self.adaptive_switch)
+            self.W -= self._adaptive_alpha_W
+            self.b -= self._adaptive_alpha_b
+        else:
+            self.W -= self.alpha * self.dW
+            self.b -= self.alpha * self.db
+
     def __str__(self):
         s = "Perseptrons Layer:\n"
         s += "\tnum_neurons: " + str(self._num_neurons) + "\n"
@@ -139,8 +151,3 @@ class DLLayer:
         plt.title("W histogram")
         plt.show()
         return s
-
-
-
-m = DLLayer(3, 1)
-print(m)
