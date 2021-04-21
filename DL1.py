@@ -161,3 +161,93 @@ class DLLayer:
         plt.title("W histogram")
         plt.show()
         return s
+
+
+class DLModel:
+    def __init__(self, name="Model"):
+        self.name = name
+        self.layers = [None]
+        self._is_compiled = False
+
+    def add(self, layer):
+        self.layers.append(layer)
+
+    def _squared_means(self, AL, Y):
+        J = (AL - Y) ** 2
+        return J
+
+    def _squared_means_backward(self, AL, Y):
+        dAL = 2 * (AL - Y)
+        return dAL
+
+    def _cross_entropy(self, AL, Y):
+        J = np.where(Y == 0, -np.log(1 - AL), -np.log(AL))
+        return J
+
+    def _cross_entropy_backward(self,AL,Y):
+        dAL = np.where(Y == 0, 1/(1-AL), -1/AL)
+        return dAL
+
+    def compile(self, loss="squared_means", threshold=0.5):
+        self.threshold = threshold
+        self.loss = loss
+        self._is_compiled = True
+        if loss == "squared_means":
+            self.loss_forward = self._squared_means
+            self.loss_backward = self._squared_means_backward
+        elif loss == "cross_entropy":
+            self.loss_forward = self._cross_entropy
+            self.loss_backward = self._cross_entropy_backward
+        elif loss == "categorical_cross_entropy":
+            self.loss_forward = self._categorical_cross_entropy
+            self.loss_backward = self._categorical_cross_entropy_backward
+        else:
+            raise NotImplementedError("Unimplemented loss function: " + loss)
+
+    def compute_cost(self, AL, Y):
+        m = AL.shape[1]
+        errors = self.loss_forward(AL, Y)
+        J = (1 / m) * np.sum(errors)
+        return J
+
+    def train(self, X, Y, num_iterations):
+        print_ind = max(num_iterations / 100, 1)
+        L = len(self.layers)
+        costs = []
+        for i in range(1, num_iterations + 1):
+            Al = X
+            for l in range(1, L):
+                Al = self.layers[l].forward_propagation(Al, False)
+
+            if i % print_ind == 0:
+                costs.append(self.compute_cost(Al, Y))
+
+            dAl = self.loss_backward(Al, Y)
+            for l in reversed(range(1, L)):
+                dAl, dW, db = self.layers[l].backward_propagation(dAl)
+                self.layers[l].update_parameters(dW, db)
+        return costs
+
+    def predict(self, X):
+        Al = X
+        L = len(self.layers)
+        for i in range(1, L):
+            Al = self.layers[i].forward_propagation(Al, True)
+
+        if Al.shape[0] > 1:  # softmax
+            predictions = np.where(Al == Al.max(axis=0), 1, 0)
+            return predictions
+        else:
+            return Al > self.threshold
+
+    def __str__(self):
+        s = "Model description:\n\tnum_layers: " + str(len(self.layers) - 1) + "\n"
+        if self._is_compiled:
+            s += "\tCompilation parameters:\n"
+            s += "\t\tprediction threshold: " + str(self.threshold) + "\n"
+            s += "\t\tloss function: " + self.loss + "\n\n"
+
+        for i in range(1, len(self.layers)):
+            s += "\tLayer " + str(i) + ":" + str(self.layers[i]) + "\n"
+        return s
+
