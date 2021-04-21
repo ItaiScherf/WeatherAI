@@ -221,11 +221,10 @@ class DLModel:
 
             if i % print_ind == 0:
                 costs.append(self.compute_cost(Al, Y))
-
             dAl = self.loss_backward(Al, Y)
             for l in reversed(range(1, L)):
-                dAl, dW, db = self.layers[l].backward_propagation(dAl)
-                self.layers[l].update_parameters(dW, db)
+                dAl = self.layers[l].backward_propagation(dAl)
+                self.layers[l].update_parameters(self.layers[l].dW, self.layers[l].db)
         return costs
 
     def predict(self, X):
@@ -250,4 +249,3 @@ class DLModel:
         for i in range(1, len(self.layers)):
             s += "\tLayer " + str(i) + ":" + str(self.layers[i]) + "\n"
         return s
-
