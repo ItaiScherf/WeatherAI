@@ -2,6 +2,7 @@ import numpy as np
 import json
 import requests
 import datetime as dt
+
 def Get_X(d1,m1,y1):
 
     if d1-7<0:
@@ -82,6 +83,10 @@ def Get_Y(d1,m1,y1):
     response = requests.request("GET", TDurl, headers=headers)
     req_result = json.loads(response.text.encode('utf8'))
     TD = np.array([i["channels"][0]["value"] for i in req_result["data"]])
+    L = len(TD)
+    TDAvg = 0
+    for i in range(L):
+        TDAvg += TD[i] / L
     # print(TD)
 
     # Rain %
@@ -89,6 +94,9 @@ def Get_Y(d1,m1,y1):
     response = requests.request("GET", Rainurl, headers=headers)
     req_result = json.loads(response.text.encode('utf8'))
     Rain = np.array([i["channels"][0]["value"] for i in req_result["data"]])
+    RainAvg = 0
+    for i in range(L):
+        RainAvg += Rain[i] / L
     # (Rain)
 
     # Wind speed
@@ -96,6 +104,9 @@ def Get_Y(d1,m1,y1):
     response = requests.request("GET", WSurl, headers=headers)
     req_result = json.loads(response.text.encode('utf8'))
     WS = np.array([i["channels"][0]["value"] for i in req_result["data"]])
+    WSAvg = 0
+    for i in range(L):
+        WSAvg += WS[i] / L
     # print(WS)
 
     # Wind direction
@@ -103,6 +114,9 @@ def Get_Y(d1,m1,y1):
     response = requests.request("GET", WDurl, headers=headers)
     req_result = json.loads(response.text.encode('utf8'))
     WD = np.array([i["channels"][0]["value"] for i in req_result["data"]])
+    WDAvg = 0
+    for i in range(L):
+        WDAvg += WD[i] / L
     # print(WD)
 
     # Humidity
@@ -110,6 +124,9 @@ def Get_Y(d1,m1,y1):
     response = requests.request("GET", RHurl, headers=headers)
     req_result = json.loads(response.text.encode('utf8'))
     RH = np.array([i["channels"][0]["value"] for i in req_result["data"]])
+    RHAvg = 0
+    for i in range(L):
+        RHAvg += RH[i] / L
     # print(RH)
 
     # Time
@@ -117,8 +134,33 @@ def Get_Y(d1,m1,y1):
     response = requests.request("GET", Timeurl, headers=headers)
     req_result = json.loads(response.text.encode('utf8'))
     Time = np.array([i["channels"][0]["value"] for i in req_result["data"]])
+    TimeAvg = 0
+    for i in range (L):
+        TimeAvg += Time[i]/L
     # print(Time)
 
-    data = np.array([TD, Rain, RH, WS, WD, Time])
-    Y = np.transpose(data)
+    Y = []
+    #Y = [storm, rainy ,strong winds, very cold, cold, nightmare, super hot, nice] 
+    if RainAvg > 30:
+        if WSAvg > 7.5: #storm
+            Y = [1,0,0,0,0,0,0,0]
+        else: #rainy
+            Y = [0,1,0,0,0,0,0,0]
+    elif TDAvg < 22:
+        if WSAvg > 7.5: # strong Winds
+            Y = [0,0,1,0,0,0,0,0]
+        elif TDAvg < 15: #very cold
+            Y = [0,0,0,1,0,0,0,0]
+        else: # just cold
+            Y = [0,0,0,0,1,0,0,0]
+    elif TDAvg >= 22:
+        if TDAvg >= 30:
+            if RH>=70:# nightmare
+                Y = [0,0,0,0,0,1,0,0]
+            else: #superhot
+                Y = [0,0,0,0,0,0,1,0]
+        else: #nice
+            Y = [0,0,0,0,0,0,0,1]
+
+
     return Y
