@@ -47,6 +47,12 @@ class DLLayer:
         elif activation == "leaky_relu":
             self.activation_forward = self._leaky_relu
             self.activation_backward = self._leaky_relu_backward
+        elif activation == "softmax":
+            self.activation_forward = self._softmax
+            self.activation_backward = self._softmax_backward
+        elif activation == "trim_softmax":
+            self.activation_forward = self._trim_softmax
+            self.activation_backward = self._softmax_backward
 
     def get_W_shape(self):
         return (self._num_neurons, *(self._input_shape))
@@ -131,6 +137,24 @@ class DLLayer:
         dZ = np.where(self._Z <= 0, self.leaky_relu_d * dA, dA)
         return dZ
 
+    def _softmax(self, Z):
+        eZ = np.exp(Z)
+        A = eZ / np.sum(eZ, axis=0)
+        return A
+
+    def _trim_softmax(self, Z):
+        with np.errstate(over='raise', divide='raise'):
+            try:
+                eZ = np.exp(Z)
+            except FloatingPointError:
+                Z = np.where(Z > 100, 100, Z)
+                eZ = np.exp(Z)
+        A = eZ / np.sum(eZ, axis=0)
+        return A
+
+    def _softmax_backward(self, dZ):
+        return dZ
+
     #פונקציות חלחול
     def forward_propagation(self, A_prev, is_predict):
         self._A_prev = np.array(A_prev, copy=True)
@@ -146,17 +170,17 @@ class DLLayer:
         dA_prev = self.W.T @ dZ
         return dA_prev
 
-    def update_parameters(self, dW, db): #עדכון פרמטרים b וW
+    def update_parameters(self):
         if self._optimization == 'adaptive':
-            self._adaptive_alpha_W *= np.where(self._adaptive_alpha_W * dW > 0, self.adaptive_cont,
+            self._adaptive_alpha_W *= np.where(self._adaptive_alpha_W * self.dW > 0, self.adaptive_cont,
                                                -self.adaptive_switch)
-            self._adaptive_alpha_b *= np.where(self._adaptive_alpha_b * db > 0, self.adaptive_cont,
+            self._adaptive_alpha_b *= np.where(self._adaptive_alpha_b * self.db > 0, self.adaptive_cont,
                                                -self.adaptive_switch)
             self.W -= self._adaptive_alpha_W
             self.b -= self._adaptive_alpha_b
         else:
-            self.W -= self.alpha * dW
-            self.b -= self.alpha * db
+            self.W -= self.alpha * self.dW
+            self.b -= self.alpha * self.db
 
     def save_weights(self, path, file_name): #לוקח ערכים שמורים מh5py
         if not os.path.exists(path):
@@ -214,6 +238,14 @@ class DLModel:
         dAL = np.where(Y == 0, 1/(1-AL), -1/AL)
         return dAL
 
+    def _categorical_cross_entropy(self, AL, Y):
+        errors = np.where(Y == 1, -np.log(AL), 0)  # -np.sum(np.multiply(Y, np.log(AL)))
+        return errors
+
+    def _categorical_cross_entropy_backward(self, AL, Y):
+        dZl = AL - Y
+        return dZl
+
     def compile(self, loss="squared_means", threshold=0.5):
         self.threshold = threshold
         self.loss = loss
@@ -237,20 +269,26 @@ class DLModel:
         return J
 
     def train(self, X, Y, num_iterations):
-        print_ind = max(num_iterations / 100, 1)
+        print_ind = max(num_iterations // 100, 1)
         L = len(self.layers)
         costs = []
-        for i in range(1, num_iterations + 1):
+        for i in range(num_iterations):
+            # forward propagation
             Al = X
             for l in range(1, L):
                 Al = self.layers[l].forward_propagation(Al, False)
-
-            if i % print_ind == 0:
-                costs.append(self.compute_cost(Al, Y))
+                # backward propagation
             dAl = self.loss_backward(Al, Y)
             for l in reversed(range(1, L)):
                 dAl = self.layers[l].backward_propagation(dAl)
-                self.layers[l].update_parameters(self.layers[l].dW, self.layers[l].db)
+                # update parameters
+                self.layers[l].update_parameters()
+            # record progress
+            if i % print_ind == 0:
+                J = self.compute_cost(Al, Y)
+                costs.append(J)
+                p = i * 100 // num_iterations
+                print("cost after ", str(i + 1), "updates (" + str(i // print_ind) + "%):", str(J))
         return costs
 
 
@@ -280,6 +318,3 @@ class DLModel:
     def save_weights(self, path):
         for i in range(1, len(self.layers)):
             self.layers[i].save_weights(path, "Layer" + str(i))
-
-
-
