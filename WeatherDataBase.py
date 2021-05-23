@@ -72,8 +72,8 @@ def Get_X(d1,m1,y1):
 #print(Time)
 
     data = np.array([TD, Rain, RH, WS, WD, Time])
-    x = np.transpose(data)
-    return x
+    X = np.resize(data, (1,))
+    return X
 
 def Get_Y(d1,m1,y1):
     headers = {'Authorization': 'ApiToken f058958a-d8bd-47cc-95d7-7ecf98610e47'}
@@ -140,7 +140,7 @@ def Get_Y(d1,m1,y1):
     # print(Time)
 
     Y = []
-    #Y = [storm, rainy ,strong winds, very cold, cold, nightmare, super hot, nice] 
+    #Y = [storm, rainy ,strong winds, very cold, cold, nightmare, super hot, nice]
     if RainAvg > 30:
         if WSAvg > 7.5: #storm
             Y = [1,0,0,0,0,0,0,0]
@@ -161,6 +161,5 @@ def Get_Y(d1,m1,y1):
                 Y = [0,0,0,0,0,0,1,0]
         else: #nice
             Y = [0,0,0,0,0,0,0,1]
-
-
+    Y = np.transpose(Y)
     return Y
