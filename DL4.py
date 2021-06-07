@@ -3,114 +3,9 @@ import matplotlib.pyplot as plt
 import os
 import h5py
 
-
-
-class DLModel:
-    def __init__(self, name="Model"):
-        self.name = name
-        self.layers = [None]
-        self._is_compiled = False
-
-    def add(self, layer):
-        self.layers.append(layer)
-
-    def __str__(self):
-        s = self.name + " description:\n\tnum_layers: " + str(len(self.layers) - 1) + "\n"
-        if self._is_compiled:
-            s += "\tCompilation parameters:\n"
-            s += "\t\tprediction threshold: " + str(self.threshold) + "\n"
-            s += "\t\tloss function: " + self.loss + "\n\n"
-
-        for i in range(1, len(self.layers)):
-            s += "\tLayer " + str(i) + ":" + str(self.layers[i]) + "\n"
-        return s
-
-    def compile(self, loss, threshold=0.5):
-        self.threshold = threshold
-        self.loss = loss
-        self._is_compiled = True
-        if loss == "squared_means":
-            self.loss_forward = self._squared_means
-            self.loss_backward = self._squared_means_backward
-        elif loss == "cross_entropy":
-            self.loss_forward = self._cross_entropy
-            self.loss_backward = self._cross_entropy_backward
-        elif loss == "categorical_cross_entropy":
-            self.loss_forward = self._categorical_cross_entropy
-            self.loss_backward = self._categorical_cross_entropy_backward
-        else:
-            raise NotImplementedError("Unimplemented loss function: " + loss)
-
-    def _squared_means(self, AL, Y):
-        return (AL - Y) ** 2
-
-    def _squared_means_backward(self, AL, Y):
-        return 2 * (AL - Y)
-
-    def _cross_entropy(self, AL, Y):
-        return np.where(Y == 0, -np.log(1 - AL), -np.log(AL))
-
-    def _cross_entropy_backward(self, AL, Y):
-        return np.where(Y == 0, 1 / (1 - AL), -1 / AL)
-
-    def compute_cost(self, AL, Y):
-        m = AL.shape[1]
-        L = len(self.layers)
-        errors = self.loss_forward(AL, Y)
-        J = (1 / m) * np.sum(errors)
-
-        for i in range(1, L):
-            if self.layers[i].regularization == "L2":
-                J += (self.layers[i].L2_lambda / 2*m) * np.sum(np.square(self.layers[i].W))
-
-        return J
-
-    def train(self, X, Y, num_iterations):
-        print_ind = max(num_iterations // 20, 1)
-        L = len(self.layers)
-        costs = []
-        for i in range(num_iterations):
-            # forward propagation
-            Al = X
-            for l in range(1, L):
-                Al = self.layers[l].forward_propagation(Al, False)
-            # backward propagation
-            dAl = self.loss_backward(Al, Y)
-            for l in reversed(range(1, L)):
-                dAl = self.layers[l].backward_propagation(dAl)
-                # update parameters
-                self.layers[l].update_parameters()
-            # record progress
-            if i % print_ind == 0:
-                J = self.compute_cost(Al, Y)
-                costs.append(J)
-                print("cost after ", str(i + 1), "updates (" + str(i * 100 // num_iterations) + "%):", str(J))
-        return costs
-
-    def predict(self, X):
-        Al = X
-        for i in range(1, len(self.layers)):
-            Al = self.layers[i].forward_propagation(Al, True)
-
-        if Al.shape[0] > 1:
-            return np.where(Al==Al.max(axis=0),1,0)
-        else:
-            return Al > self.threshold
-
-    def save_weights(self, path):
-        for i in range(1, len(self.layers)):
-            self.layers[i].save_weights(path, "Layer" + str(i))
-
-    def _categorical_cross_entropy(self, AL, Y):
-        return np.where(Y == 1, -np.log(AL), 0)
-
-    def _categorical_cross_entropy_backward(self, AL, Y):
-        return AL - Y
-
-
 class DLLayer:
-    def __init__(self, name, num_units, input_shape, W_initialization="random", activation="relu", learning_rate=1.2,
-                 optimization=None, regularization=None):
+    def __init__(self, name, num_units, input_shape, activation="relu", W_initialization="random", learning_rate=1.2,
+                 optimization="adaptive", regularization=None):
         self._num_units = num_units
         self._activation = activation
         self._input_shape = input_shape
@@ -224,8 +119,6 @@ class DLLayer:
         plt.show()
         return s
 
-
-
     def _sigmoid(self, Z):
         A = 1 / (1 + np.exp(-Z))
         return A
@@ -263,6 +156,7 @@ class DLLayer:
 
     def _leaky_relu(self, Z):
         A = np.where(Z > 0, Z, self.leaky_relu_d * Z)
+        # print("A: " + str(A))
         return A
 
     def _leaky_relu_backward(self, dA):
@@ -293,6 +187,7 @@ class DLLayer:
         return dZ
 
     def _softmax(self, Z):
+        #print("Z: "+str(Z))
         top = np.exp(Z)
         sum = np.sum(top, axis=0)
         return top/sum
@@ -318,16 +213,17 @@ class DLLayer:
             A_prev /= self.dropout_keep_prob
 
         self._A_prev = np.array(A_prev, copy=True)
-        self._Z = self.W @ A_prev + self.b
+        self._Z = self.W.dot(A_prev) + self.b
+        # print("Al: "+str(A_prev)+"\nW: "+str(self.W)+"\nb: "+str(self.b))
         A = self.activation_forward(self._Z)
         return A
 
     def backward_propagation(self, dA):
         dZ = self.activation_backward(dA)
         m = self._A_prev.shape[1]
-        self.dW = (1.0 / m) * (dZ @ self._A_prev.T)
+        self.dW = (1.0 / m) * (dZ.dot(self._A_prev.T))
         self.db = (1.0 / m) * np.sum(dZ, keepdims=True, axis=1)
-        dA_prev = self.W.T @ dZ
+        dA_prev = self.W.T.dot(dZ)
 
         if self.regularization == "dropout":
             dA_prev *= self._D
@@ -349,6 +245,7 @@ class DLLayer:
         else:
             self.W -= self.alpha * self.dW
             self.b -= self.alpha * self.db
+        # print("W: " + str(self.W) + "\nb: " + str(self.b))
 
     def save_weights(self, path, file_name):
         if not os.path.exists(path):
@@ -357,3 +254,109 @@ class DLLayer:
         with h5py.File(path + "/" + file_name + '.h5', 'w') as hf:
             hf.create_dataset("W", data=self.W)
             hf.create_dataset("b", data=self.b)
+
+class DLModel:
+    def __init__(self, name="Model"):
+        self.name = name
+        self.layers = []
+        self._is_compiled = False
+
+    def add(self, layer):
+        self.layers.append(layer)
+
+    def __str__(self):
+        s = self.name + " description:\n\tnum_layers: " + str(len(self.layers) - 1) + "\n"
+        if self._is_compiled:
+            s += "\tCompilation parameters:\n"
+            s += "\t\tprediction threshold: " + str(self.threshold) + "\n"
+            s += "\t\tloss function: " + self.loss + "\n\n"
+
+        for i in range(1, len(self.layers)):
+            s += "\tLayer " + str(i) + ":" + str(self.layers[i]) + "\n"
+        return s
+
+    def compile(self, loss, threshold=0.5):
+        self.threshold = threshold
+        self.loss = loss
+        self._is_compiled = True
+        if loss == "squared_means":
+            self.loss_forward = self._squared_means
+            self.loss_backward = self._squared_means_backward
+        elif loss == "cross_entropy":
+            self.loss_forward = self._cross_entropy
+            self.loss_backward = self._cross_entropy_backward
+        elif loss == "categorical_cross_entropy":
+            self.loss_forward = self._categorical_cross_entropy
+            self.loss_backward = self._categorical_cross_entropy_backward
+        else:
+            raise NotImplementedError("Unimplemented loss function: " + loss)
+
+    def _squared_means(self, AL, Y):
+        return (AL - Y) ** 2
+
+    def _squared_means_backward(self, AL, Y):
+        return 2 * (AL - Y)
+
+    def _cross_entropy(self, AL, Y):
+        return np.where(Y == 0, -np.log(1 - AL), -np.log(AL))
+
+    def _cross_entropy_backward(self, AL, Y):
+        return np.where(Y == 0, 1 / (1 - AL), -1 / AL)
+
+    def _categorical_cross_entropy(self, AL, Y):
+        return np.where(Y == 1, -np.log(AL), 0)
+
+    def _categorical_cross_entropy_backward(self, AL, Y):
+        return AL - Y
+
+    def compute_cost(self, AL, Y):
+        m = AL.shape[1]
+        L = len(self.layers)
+        errors = self.loss_forward(AL, Y)
+        J = (1 / m) * np.sum(errors)
+
+        for i in range(1, L):
+            if self.layers[i].regularization == "L2":
+                J += (self.layers[i].L2_lambda / 2*m) * np.sum(np.square(self.layers[i].W))
+
+        return J
+
+    def train(self, X, Y, num_iterations):
+        print_ind = max(num_iterations // 20, 1)
+        L = len(self.layers)
+        costs = []
+        for i in range(num_iterations):
+            # forward propagation
+            Al = X
+            for l in range(0, L):
+                # print("#"+str(l))
+                Al = self.layers[l].forward_propagation(Al, False)
+            # backward propagation
+            dAl = self.loss_backward(Al, Y)
+            for l in reversed(range(0, L)):
+                # print("#" + str(l))
+                dAl = self.layers[l].backward_propagation(dAl)
+                # update parameters
+                self.layers[l].update_parameters()
+            # record progress
+            if i % print_ind == 0:
+                print("AL :" + str(Al.transpose()))
+                J = self.compute_cost(Al, Y)
+                costs.append(J)
+                print("cost after ", str(i + 1), "updates (" + str(i * 100 // num_iterations) + "%):", str(J))
+        return costs
+
+    def predict(self, X):
+        Al = X
+        for i in range(0, len(self.layers)):
+            print(i)
+            Al = self.layers[i].forward_propagation(Al, True)
+
+        if Al.shape[0] > 1:
+            return np.where(Al==Al.max(axis=0),1,0)
+        else:
+            return Al > self.threshold
+
+    def save_weights(self, path):
+        for i in range(1, len(self.layers)):
+            self.layers[i].save_weights(path, "Layer" + str(i))
