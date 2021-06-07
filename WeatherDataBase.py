@@ -97,9 +97,10 @@ def Get_Y(d1,m1,y1):
     TD = np.array([i["channels"][0]["value"] for i in req_result["data"]])
     L = len(TD)
     TDAvg = 0
-    for i in range(L):
-        TDAvg += TD[i] / L
-    # print(TD)
+    for i in range(36,L-36): #from 6 am to 6 pm
+        TDAvg += TD[i] / (L-72)
+        # print(TD[i])
+    # print(TDAvg)
 
     # Rain %
     Rainurl = "https://api.ims.gov.il/v1/envista/stations/178/data/1/daily/"+str(y1)+"/"+str(m1)+"/"+str(d1)
@@ -175,3 +176,4 @@ def Get_Y(d1,m1,y1):
             Y = [0,0,0,0,0,0,0,1]
     Y = np.transpose(Y)
     return Y
+
