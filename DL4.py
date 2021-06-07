@@ -340,7 +340,7 @@ class DLModel:
                 self.layers[l].update_parameters()
             # record progress
             if i % print_ind == 0:
-                print("AL :" + str(Al.transpose()))
+                #print("AL :" + str(Al.transpose()))
                 J = self.compute_cost(Al, Y)
                 costs.append(J)
                 print("cost after ", str(i + 1), "updates (" + str(i * 100 // num_iterations) + "%):", str(J))
@@ -349,7 +349,7 @@ class DLModel:
     def predict(self, X):
         Al = X
         for i in range(0, len(self.layers)):
-            print(i)
+            # print(i)
             Al = self.layers[i].forward_propagation(Al, True)
 
         if Al.shape[0] > 1:
