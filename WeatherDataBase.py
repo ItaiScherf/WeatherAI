@@ -41,6 +41,9 @@ def Get_X(d1,m1,y1):
     response = requests.request("GET", Rainurl, headers=headers)
     req_result = json.loads(response.text.encode('utf8'))
     Rain = np.array([i["channels"][0]["value"] for i in req_result["data"]])
+    for i in range(0,len(Rain)):
+        if Rain[i] == 0:
+            Rain[i] = 1
 #(Rain)
 
     #Wind speed
@@ -48,6 +51,9 @@ def Get_X(d1,m1,y1):
     response = requests.request("GET", WSurl, headers=headers)
     req_result = json.loads(response.text.encode('utf8'))
     WS = np.array([i["channels"][0]["value"] for i in req_result["data"]])
+    for i in range(0,len(WS)):
+        if WS[i] == 0:
+            WS[i] = 0.1
 #print(WS)
 
     #Wind direction
@@ -55,6 +61,9 @@ def Get_X(d1,m1,y1):
     response = requests.request("GET", WDurl, headers=headers)
     req_result = json.loads(response.text.encode('utf8'))
     WD = np.array([i["channels"][0]["value"] for i in req_result["data"]])
+    for i in range(0,len(WD)):
+        if WD[i] == 0:
+            WD[i] = 365
 #print(WD)
 
     #Humidity
@@ -69,10 +78,13 @@ def Get_X(d1,m1,y1):
     response = requests.request("GET", Timeurl, headers=headers)
     req_result = json.loads(response.text.encode('utf8'))
     Time = np.array([i["channels"][0]["value"] for i in req_result["data"]])
+    for i in range(0,len(Time)):
+         if Time[i] == 0:
+             Time[i] = 24
 #print(Time)
 
-    data = np.array([TD, Rain, RH, WS, WD, Time])
-    X = np.resize(data, (1,))
+    data = np.array([TD, Rain, RH, WS, WD, Time]).T
+    X = np.resize(data, (data.shape[0] * data.shape[1]))
     return X
 
 def Get_Y(d1,m1,y1):
