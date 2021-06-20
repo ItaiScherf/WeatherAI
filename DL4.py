@@ -5,19 +5,13 @@ import h5py
 
 class DLLayer:
     def __init__(self, name, num_units, input_shape, activation="relu", W_initialization="random", learning_rate=1.2,
-                 optimization="adaptive", regularization=None):
+                 optimization="adaptive"):
         self._num_units = num_units
         self._activation = activation
         self._input_shape = input_shape
         self._optimization = optimization
         self.alpha = float(learning_rate)
         self.name = name
-        self.regularization = regularization
-
-        if self.regularization == "L2":
-            self.L2_lambda = 0.1
-        if self.regularization == "dropout":
-            self.dropout_keep_prob = 0.6
 
         # activation parameters
         self.activation_trim = 1e-10
@@ -95,15 +89,6 @@ class DLLayer:
             s += "\t\t\tleaky_relu_d: " + str(self.leaky_relu_d) + "\n"
         s += "\tinput_shape: (" + str(*self._input_shape) + ")\n"
         s += "\tlearning_rate (alpha): " + str(self.alpha) + "\n"
-        # regularization
-        if self.regularization != None:
-            s += "\tregularization: " + str(self.regularization) + "\n"
-            if self.regularization == "L2":
-                s += "\t" + "\t L2 parameters: " + "\n"
-                s += "\t" + "\t" + "\tlambda: " + str(self.L2_lambda) + "\n"
-            if self.regularization == "dropout":
-                s += "\t" + "\t dropout parameters: " + "\n"
-                s += "\t" + "\t" + "\tkeep prob: " + str(self.dropout_keep_prob) + "\n"
         # optimization
         if self._optimization != None:
             s += "\toptimization: " + str(self._optimization) + "\n"
@@ -206,11 +191,6 @@ class DLLayer:
         return A
 
     def forward_propagation(self, A_prev, is_predict):
-        if self.regularization == "dropout" and not is_predict:
-            self._D = np.random.rand(A_prev.shape[0], 1)
-            self._D = self._D < self.dropout_keep_prob
-            A_prev *= self._D
-            A_prev /= self.dropout_keep_prob
 
         self._A_prev = np.array(A_prev, copy=True)
         self._Z = self.W.dot(A_prev) + self.b
@@ -224,12 +204,6 @@ class DLLayer:
         self.dW = (1.0 / m) * (dZ.dot(self._A_prev.T))
         self.db = (1.0 / m) * np.sum(dZ, keepdims=True, axis=1)
         dA_prev = self.W.T.dot(dZ)
-
-        if self.regularization == "dropout":
-            dA_prev *= self._D
-            dA_prev /= self.dropout_keep_prob
-        elif self.regularization == "L2":
-            self.dW += (self.L2_lambda/m) * self.W
 
         return dA_prev
 
@@ -315,10 +289,6 @@ class DLModel:
         errors = self.loss_forward(AL, Y)
         J = (1 / m) * np.sum(errors)
 
-        for i in range(1, L):
-            if self.layers[i].regularization == "L2":
-                J += (self.layers[i].L2_lambda / 2*m) * np.sum(np.square(self.layers[i].W))
-
         return J
 
     def train(self, X, Y, num_iterations):
@@ -340,7 +310,7 @@ class DLModel:
                 self.layers[l].update_parameters()
             # record progress
             if i % print_ind == 0:
-                #print("AL :" + str(Al.transpose()))
+                # print("AL :" + str(Al.transpose()))
                 J = self.compute_cost(Al, Y)
                 costs.append(J)
                 print("cost after ", str(i + 1), "updates (" + str(i * 100 // num_iterations) + "%):", str(J))
@@ -349,9 +319,8 @@ class DLModel:
     def predict(self, X):
         Al = X
         for i in range(0, len(self.layers)):
-            # print(i)
             Al = self.layers[i].forward_propagation(Al, True)
-
+        print("Al = "+str(Al.transpose()))
         if Al.shape[0] > 1:
             return np.where(Al==Al.max(axis=0),1,0)
         else:
@@ -360,3 +329,11 @@ class DLModel:
     def save_weights(self, path):
         for i in range(1, len(self.layers)):
             self.layers[i].save_weights(path, "Layer" + str(i))
+
+    def confusion_matrix(self, X, Y):
+        prediction = self.predict(X)
+        prediction_index = np.argmax(prediction, axis=0)
+        Y_index = np.argmax(Y, axis=0)
+        right = np.sum(prediction_index == Y_index)
+        print("accuracy: ", str(right / len(Y[0])))
+        print(self.confusion_matrix(prediction_index, Y_index))
