@@ -2,31 +2,15 @@ import numpy as np
 import json
 import requests
 import datetime as dt
+import random
 
 def Get_X(d1,m1,y1):
+    date1 = dt.datetime(y1, m1, d1)
+    date2 = date1 - dt.timedelta(days=6)
+    d2 = date2.day
+    m2 = date2.month
+    y2 = date2.year
 
-    if d1-7<0:
-        if m1 == 1:
-            d2 = d1 - 7 + 31
-            m2 = 12
-            y2 = y1-1
-        elif m1 == 3 or m1 == 5 or m1 == 7 or m1 == 8 or m1 == 10 or m1 == 12:
-            d2 = d1-7+31
-            m2 = m1 - 1
-            y2 = y1
-        elif m1 == 4 or m1 == 6 or m1 == 9 or m1 == 11:
-            d2 = d1 - 7 + 30
-            m2 = m1 - 1
-            y2 = y1
-        elif  m1 == 2:
-            d2 = d1 - 7 + 28
-            m2 = m1 - 1
-            y2 = y1
-    else:
-        d2 = d1 - 7
-        m2 = m1
-        y2 = y1
-    print(str(d2)+"-"+str(m2)+"-"+str(y2))
     headers = {'Authorization': 'ApiToken f058958a-d8bd-47cc-95d7-7ecf98610e47'}
 
     #Tempatures
@@ -97,10 +81,9 @@ def Get_Y(d1,m1,y1):
     TD = np.array([i["channels"][0]["value"] for i in req_result["data"]])
     L = len(TD)
     TDAvg = 0
-    for i in range(36,L-36): #from 6 am to 6 pm
-        TDAvg += TD[i] / (L-72)
-        # print(TD[i])
-    # print(TDAvg)
+    for i in range(L):
+        TDAvg += TD[i] / L
+    # print(TD)
 
     # Rain %
     Rainurl = "https://api.ims.gov.il/v1/envista/stations/178/data/1/daily/"+str(y1)+"/"+str(m1)+"/"+str(d1)
@@ -153,27 +136,85 @@ def Get_Y(d1,m1,y1):
     # print(Time)
 
     Y = []
-    #Y = [storm, rainy ,strong winds, very cold, cold, nightmare, super hot, nice]
-    if RainAvg > 30:
-        if WSAvg > 7.5: #storm
-            Y = [1,0,0,0,0,0,0,0]
-        else: #rainy
-            Y = [0,1,0,0,0,0,0,0]
+    # Y = [storm, rainy ,strong winds, very cold, cold, very hot, hot, nice]
+    if RainAvg >= 30:
+        if WSAvg >= 7.5:  # storm
+            Y = [1, 0, 0, 0, 0, 0, 0, 0]
+        else:  # rainy
+            Y = [0, 1, 0, 0, 0, 0, 0, 0]
     elif TDAvg < 22:
-        if WSAvg > 7.5: # strong Winds
-            Y = [0,0,1,0,0,0,0,0]
-        elif TDAvg < 15: #very cold
-            Y = [0,0,0,1,0,0,0,0]
-        else: # just cold
-            Y = [0,0,0,0,1,0,0,0]
+        if WSAvg >= 7.5:  # strong Winds
+            Y = [0, 0, 1, 0, 0, 0, 0, 0]
+        elif TDAvg <= 15:  # very cold
+            Y = [0, 0, 0, 1, 0, 0, 0, 0]
+        else:  # just cold
+            Y = [0, 0, 0, 0, 1, 0, 0, 0]
     elif TDAvg >= 22:
         if TDAvg >= 30:
-            if RH>=70:# nightmare
-                Y = [0,0,0,0,0,1,0,0]
-            else: #superhot
-                Y = [0,0,0,0,0,0,1,0]
-        else: #nice
-            Y = [0,0,0,0,0,0,0,1]
+            if RH >= 70:  # very hot
+                Y = [0, 0, 0, 0, 0, 1, 0, 0]
+            else:  # just hot
+                Y = [0, 0, 0, 0, 0, 0, 1, 0]
+        else:  # nice
+            Y = [0, 0, 0, 0, 0, 0, 0, 1]
     Y = np.transpose(Y)
     return Y
 
+def NextDay(d1,m1,y1):
+
+    date1 = dt.datetime(y1,m1,d1)
+    date2 = date1 + dt.timedelta(days=1)
+    d2 = date2.day
+    m2 = date2.month
+    # print(d2)
+    # print(m2)
+    y2 = date2.year
+    return d2,m2,y2
+
+def Isbigger(d1,m1,y1,d2,m2,y2):
+    date1 = dt.date(y1,m1,d1)
+    date2 = dt.date(y2,m2,d2)
+    if date1>date2:
+        return False
+    return True
+
+def Get_Data_from_to(d1,m1,y1,d2,m2,y2):
+
+    days=0
+    labels_train =[]
+    labels_test = []
+    x_train = []
+    x_test = []
+    train_test_ratio = 0.2
+    while(Isbigger(d1,m1,y1,d2,m2,y2)):
+        print(days)
+        print("d1 ="+str(d1)+"\nm1 ="+str(m1)+"\ny1 ="+str(y1))
+        data=Get_X(d1,m1,y1)
+        d3, m3, y3 = NextDay(d1, m1, y1)
+        if (data.shape[0]!=5184):
+            d1, m1, y1 = NextDay(d1, m1, y1)
+            continue
+        if (days==0):
+            x_train.append(data)
+            labels_train.append(Get_Y(d3,m3,y3))
+        elif days==1:
+            x_test.append(data)
+            labels_test.append(Get_Y(d3,m3,y3))
+        else:
+            ratio=random.uniform(0, 1)
+            if (ratio>train_test_ratio):
+                x_train.append(data)
+                labels_train.append(Get_Y(d3,m3,y3))
+            else:
+                x_test.append(data)
+                labels_test.append(Get_Y(d3,m3,y3))
+
+        # data=Get_X(d1,m1,y1)
+        d1,m1,y1 = NextDay(d1,m1,y1)
+        days+=1
+    print("days="+str(days))
+    x_train = np.array(x_train).T
+    labels_train = np.array(labels_train).T
+    x_test = np.array(x_test).T
+    labels_test = np.array(labels_test).T
+    return x_train,labels_train,x_test,labels_test.T
