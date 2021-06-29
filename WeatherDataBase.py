@@ -188,7 +188,7 @@ def Get_Data_from_to(d1,m1,y1,d2,m2,y2):
     train_test_ratio = 0.2
     while(Isbigger(d1,m1,y1,d2,m2,y2)):
         print(days)
-        print("d1 ="+str(d1)+"\nm1 ="+str(m1)+"\ny1 ="+str(y1))
+        # print("d1 ="+str(d1)+"\nm1 ="+str(m1)+"\ny1 ="+str(y1))
         data=Get_X(d1,m1,y1)
         d3, m3, y3 = NextDay(d1, m1, y1)
         if (data.shape[0]!=5184):
@@ -218,3 +218,8 @@ def Get_Data_from_to(d1,m1,y1,d2,m2,y2):
     x_test = np.array(x_test).T
     labels_test = np.array(labels_test).T
     return x_train,labels_train,x_test,labels_test.T
+
+def GetSeason(m1):
+    if m1>4 & m1 <10:
+        return "summer"
+    return "winter"
