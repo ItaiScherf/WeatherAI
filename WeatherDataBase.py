@@ -81,7 +81,7 @@ def Get_Y(d1,m1,y1):
     TD = np.array([i["channels"][0]["value"] for i in req_result["data"]])
     L = len(TD)
     TDAvg = 0
-    for i in range(L):
+    for i in range(36,L-36):
         TDAvg += TD[i] / L
     # print(TD)
 
@@ -217,7 +217,7 @@ def Get_Data_from_to(d1,m1,y1,d2,m2,y2):
     labels_train = np.array(labels_train).T
     x_test = np.array(x_test).T
     labels_test = np.array(labels_test).T
-    return x_train,labels_train,x_test,labels_test.T
+    return x_train,labels_train,x_test,labels_test
 
 def GetSeason(m1):
     if m1>4 & m1 <10:
