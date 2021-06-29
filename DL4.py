@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import h5py
+from sklearn.metrics import classification_report, confusion_matrix
 
 class DLLayer:
     def __init__(self, name, num_units, input_shape, activation="relu", W_initialization="random", learning_rate=1.2,
@@ -312,6 +313,9 @@ class DLModel:
             if i % print_ind == 0:
                 # print("AL :" + str(Al.transpose()))
                 J = self.compute_cost(Al, Y)
+                if J == 0:
+                    print("cost after ", str(i + 1), "updates (" + str(i * 100 // num_iterations) + "%):", str(J))
+                    return costs
                 costs.append(J)
                 print("cost after ", str(i + 1), "updates (" + str(i * 100 // num_iterations) + "%):", str(J))
         return costs
@@ -320,15 +324,15 @@ class DLModel:
         Al = X
         for i in range(0, len(self.layers)):
             Al = self.layers[i].forward_propagation(Al, True)
-        print("Al = "+str(Al.transpose()))
+        # print("Al = "+str(Al.transpose()))
         if Al.shape[0] > 1:
             return np.where(Al==Al.max(axis=0),1,0)
         else:
             return Al > self.threshold
 
     def save_weights(self, path):
-        for i in range(1, len(self.layers)):
-            self.layers[i].save_weights(path, "Layer" + str(i))
+        for i in range(0, len(self.layers)):
+            self.layers[i].save_weights(path, "Layer" + str(i+1))
 
     def confusion_matrix(self, X, Y):
         prediction = self.predict(X)
