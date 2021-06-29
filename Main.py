@@ -27,18 +27,18 @@ def EnterDate():
 # np.expand_dims()
 
 
-cur_path = "C:\הנדסת תוכנה\WeatherAI\Data"
-train_path = os.path.join(cur_path, 'data\\train')
+cur_path = "D:\אולטרה תיקייה\הנדסת תוכנה\data"
+# train_path = os.path.join(cur_path, 'data\\train')
 train_list = ["storm awaits!", "rainy", "strong winds", "very cold", "cold", "very hot", "hot", "lovely day"]
-trainDict = {i: train_list[i] for i in range(0, len(train_list))}
-test_path = os.path.join(cur_path, 'data\\test')
+# trainDict = {i: train_list[i] for i in range(0, len(train_list))}
+# test_path = os.path.join(cur_path, 'data\\test')
 
 print("Will you test me or train me? ⍨")
 train_test = input()
 
 if (train_test == 'train'):
 
-    X_train, Y_train, X_test, Y_test = Get_Data_from_to(1, 1, 2021, 15, 1, 2021)
+    X_train, Y_train, X_test, Y_test = Get_Data_from_to(1, 6, 2021, 15, 6, 2021)
 
     W_init1 = "Xaviar"
     W_init2 = "Xaviar"
