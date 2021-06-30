@@ -194,9 +194,9 @@ class DLLayer:
     def forward_propagation(self, A_prev, is_predict):
 
         self._A_prev = np.array(A_prev, copy=True)
-        print(self.W.shape)
+        # print(self.W.shape)
         self._Z = self.W.dot(A_prev) + self.b
-        print("Al: "+str(A_prev)+"\nW: "+str(self.W)+"\nb: "+str(self.b))
+        # print("Al: "+str(A_prev)+"\nW: "+str(self.W)+"\nb: "+str(self.b))
         A = self.activation_forward(self._Z)
         return A
 
@@ -324,7 +324,7 @@ class DLModel:
     def predict(self, X):
         Al = X
         for i in range(0, len(self.layers)):
-            # print(i)
+            # print(self.layers[i])
             Al = self.layers[i].forward_propagation(Al, True)
         # print("Al = "+str(Al.transpose()))
         if Al.shape[0] > 1:
