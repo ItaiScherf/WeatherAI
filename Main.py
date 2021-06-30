@@ -56,7 +56,7 @@ train_list = ["storm awaits!", "rainy", "strong winds", "very cold", "cold", "ve
 # trainDict = {i: train_list[i] for i in range(0, len(train_list))}
 # test_path = os.path.join(cur_path, 'data\\test')
 
-# X_train, Y_train, X_test, Y_test = Get_Data_from_to(1, 6, 2021, 15, 6, 2021)
+# X_train, Y_train, X_test, Y_test = Get_Data_from_to(1, 5, 2021, 29, 6, 2021)
 with h5py.File(r'C:\Users\Itai Scherf\PycharmProjects\pythonProject1\Database\WeatherData.h5', 'r') as hf:
     X_train = hf['x_train'][:]
     Y_train = hf['labels_train'][:]
@@ -85,7 +85,6 @@ if (train_test == 'train'):
     layer6 = DLLayer("softmax", 8, (20,), "trim_softmax", "Xaviar", 0.01, "adaptive")
 
     model = DLModel("Weather Forcast")
-
     model.add(layer1)
     model.add(layer2)
     model.add(layer3)
@@ -116,6 +115,29 @@ if (train_test == 'train'):
 
     print("Saving weights...")
     model.save_weights(r'C:\Users\Itai Scherf\PycharmProjects\pythonProject1\paramaters summer')
+##
+    d1, m1, y1 = EnterDate()
+    print("please wait a moment 😃")
+    X = np.expand_dims(Get_X(d1, m1, y1), axis=0).transpose()
+
+    layer1 = DLLayer("#1", 100, (X.shape[0],), "trim_tanh", W_init1, 0.01, "adaptive")
+    layer2 = DLLayer("#2", 50, (100,), "trim_tanh", W_init2, 0.01, "adaptive")
+    layer3 = DLLayer("#3", 50, (50,), "trim_tanh", W_init3, 0.01, "adaptive")
+    layer4 = DLLayer("#4", 50, (50,), "trim_tanh", W_init4, 0.01, "adaptive")
+    layer5 = DLLayer("#5", 20, (50,), "trim_tanh", W_init5, 0.01, "adaptive")
+    layer6 = DLLayer("softmax", 8, (20,), "trim_softmax", "Xaviar", 0.01, "adaptive")
+
+    model = DLModel("Weather Forcast")
+    model.add(layer1)
+    model.add(layer2)
+    model.add(layer3)
+    model.add(layer4)
+    model.add(layer5)
+    model.add(layer6)
+    model.compile("categorical_cross_entropy")
+
+    predictions = model.predict(X)
+    print(predictions.transpose())
 else:
 
     W_init1 = cur_path + "\Layer1.h5"
