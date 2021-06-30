@@ -84,7 +84,7 @@ def Get_Y(d1,m1,y1):
     TD = np.array([i["channels"][0]["value"] for i in req_result["data"]])
     L = len(TD)
     TDAvg = 0
-    for i in range(36,L-36):
+    for i in range(L):
         TDAvg += TD[i] / L
     # print(TD)
 
