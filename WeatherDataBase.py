@@ -1,3 +1,6 @@
+import os
+
+import h5py
 import numpy as np
 import json
 import requests
@@ -217,7 +220,17 @@ def Get_Data_from_to(d1,m1,y1,d2,m2,y2):
     labels_train = np.array(labels_train).T
     x_test = np.array(x_test).T
     labels_test = np.array(labels_test).T
+    path = r'C:\Users\Itai Scherf\PycharmProjects\pythonProject1\Database'
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    with h5py.File(path + "\\WeatherData.h5", 'w') as hf:
+        hf.create_dataset("x_train", data=x_train)
+        hf.create_dataset("labels_train", data=labels_train)
+        hf.create_dataset("x_test", data=x_test)
+        hf.create_dataset("labels_test", data=labels_test)
     return x_train,labels_train,x_test,labels_test
+
 
 def GetSeason(m1):
     if m1>4 & m1 <10:
