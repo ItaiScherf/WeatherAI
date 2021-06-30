@@ -194,8 +194,9 @@ class DLLayer:
     def forward_propagation(self, A_prev, is_predict):
 
         self._A_prev = np.array(A_prev, copy=True)
+        print(self.W.shape)
         self._Z = self.W.dot(A_prev) + self.b
-        # print("Al: "+str(A_prev)+"\nW: "+str(self.W)+"\nb: "+str(self.b))
+        print("Al: "+str(A_prev)+"\nW: "+str(self.W)+"\nb: "+str(self.b))
         A = self.activation_forward(self._Z)
         return A
 
@@ -226,7 +227,7 @@ class DLLayer:
         if not os.path.exists(path):
             os.makedirs(path)
 
-        with h5py.File(path + "/" + file_name + '.h5', 'w') as hf:
+        with h5py.File(path + "\\" + file_name + '.h5', 'w') as hf:
             hf.create_dataset("W", data=self.W)
             hf.create_dataset("b", data=self.b)
 
@@ -323,6 +324,7 @@ class DLModel:
     def predict(self, X):
         Al = X
         for i in range(0, len(self.layers)):
+            # print(i)
             Al = self.layers[i].forward_propagation(Al, True)
         # print("Al = "+str(Al.transpose()))
         if Al.shape[0] > 1:
@@ -331,8 +333,8 @@ class DLModel:
             return Al > self.threshold
 
     def save_weights(self, path):
-        for i in range(0, len(self.layers)):
-            self.layers[i].save_weights(path, "Layer" + str(i+1))
+        for i in range(1, len(self.layers)):
+            self.layers[i].save_weights(path, "Layer" + str(i))
 
     def confusion_matrix(self, X, Y):
         prediction = self.predict(X)
@@ -340,4 +342,7 @@ class DLModel:
         Y_index = np.argmax(Y, axis=0)
         right = np.sum(prediction_index == Y_index)
         print("accuracy: ", str(right / len(Y[0])))
-        print(confusion_matrix(prediction_index, Y_index))
+        cm = confusion_matrix(prediction_index, Y_index)
+        print(cm)
+        plt.matshow(cm, cmap=plt.cm.Blues)
+        plt.show()
